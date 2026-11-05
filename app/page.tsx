@@ -29,6 +29,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { hotels, Hotel, money, savings, nightsBetween } from "@/lib/hotels";
+import BookingsPanel from "@/app/bookings-panel";
 type Watch = {
   id: string;
   hotelId: string;
@@ -224,18 +225,20 @@ export default function Home() {
           <i />
         </a>
         <nav>
-          {["Discover", "My watchlist", "Saved stays"].map((t) => (
-            <button
-              key={t}
-              className={tab === t ? "active" : ""}
-              onClick={() => setTab(t)}
-            >
-              {t}
-              {t === "My watchlist" && watches.length > 0 && (
-                <b>{watches.length}</b>
-              )}
-            </button>
-          ))}
+          {["Discover", "My watchlist", "Saved stays", "My bookings"].map(
+            (t) => (
+              <button
+                key={t}
+                className={tab === t ? "active" : ""}
+                onClick={() => setTab(t)}
+              >
+                {t}
+                {t === "My watchlist" && watches.length > 0 && (
+                  <b>{watches.length}</b>
+                )}
+              </button>
+            ),
+          )}
         </nav>
         <div className="header-right">
           <span className="currency">INR · ₹</span>
@@ -425,7 +428,9 @@ export default function Home() {
             <Sparkles size={14} /> A little AI. A lot less guesswork.
           </span>
         </div>
-        {tab === "My watchlist" ? (
+        {tab === "My bookings" ? (
+          <BookingsPanel hotels={hotels} />
+        ) : tab === "My watchlist" ? (
           <section className="results">
             <div className="section-heading">
               <div>
