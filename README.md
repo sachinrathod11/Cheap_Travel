@@ -40,7 +40,7 @@ Run commands in the repository root. `npm run build` produces the production bui
 
 The assistant answers only Cheap Travel application questions: hotel comparison, tracked bookings, price checks and cancellation/rebooking costs. It retrieves application help, PostgreSQL policy guides and the signed-in user's booking records. General-purpose questions are redirected. Retrieval uses full-text search, not embeddings or a vector database.
 
-To enable model generation, set `AI_API_KEY`, an explicit accessible `AI_MODEL` and `AI_REASONING_EFFORT=low` in `.env.local`. The model must support low reasoning effort and structured output; chat UI names are not assumed to be API IDs. Run `npm run ai:models` to list account-accessible IDs. Keys stay server-side. Outbound HTTPS access to `api.openai.com` is required. See the provider guide for details; missing configuration or provider failure results in clearly labelled product-help fallback.
+To enable model generation, set `AI_API_KEY`, an explicit accessible `AI_MODEL` and `AI_REASONING_EFFORT=low` in `.env.local`. The model must support low reasoning effort and structured output; chat UI names are not assumed to be API IDs. Run `npm run ai:models` to list account-accessible IDs, then `npm run ai:check` to verify a real request using the app's settings. Keys stay server-side. Outbound HTTPS access to `api.openai.com` is required. See the provider guide for details; missing configuration or provider failure results in clearly labelled product-help fallback and a safe diagnostic code.
 
 `GET /api/hotels?city=Goa` returns explicitly marked demo offers. `POST /api/assistant` accepts `{ "question": "What is Alila's cancellation policy?", "hotelId": "alila" }`.
 
