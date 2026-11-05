@@ -2,6 +2,8 @@
 
 A hotel-first travel comparison and price-tracking MVP built with Next.js, React, and TypeScript. Compare sample offers, save hotels, track a stay, simulate a price drop, and ask a retrieval-backed policy assistant.
 
+Provider hotel search, automatic price-check jobs and in-app candidate alerts are available at `/explore` and `/account` when configured. Follow [Provider, AI and monitoring setup](docs/PROVIDERS.md). Hotel and AI credentials are not bundled. The homepage remains an explicitly labelled sample comparison.
+
 ## Run
 
 Requires Node.js 22.18+ (Node 24 recommended) and npm.
@@ -36,7 +38,7 @@ Run commands in the repository root. `npm run build` produces the production bui
 
 ## AI and retrieval
 
-Without credentials, `/api/assistant` retrieves from the small policy corpus in `lib/hotels.ts` and returns deterministic policy-based responses. This is a transparent local retrieval demo, not an embedding/vector RAG implementation.
+Without AI credentials, `/api/assistant` retrieves PostgreSQL travel guides and the signed-in user's booking records, with selected sample policies labelled demo. With `AI_API_KEY`, the model uses these sources for specific answers and can offer general travel guidance beyond the sample hotels. Retrieval uses full-text search, not embeddings or a vector database.
 
 To enable model generation, copy `.env.example` to `.env.local` and set `AI_API_KEY` securely. `AI_MODEL` defaults to `gpt-4.1-mini`. The key stays server-side. Outbound HTTPS access to `api.openai.com` is required. The route supplies retrieved policies as context, asks the model to avoid unsupported claims, and falls back to the local response if the provider fails.
 
@@ -44,11 +46,11 @@ To enable model generation, copy `.env.example` to `.env.local` and set `AI_API_
 
 ## Scope and limitations
 
-All offers, policies, review scores, and savings examples are sample data. Photos are illustrative Unsplash images, not verified photographs of the named hotels. Provider names illustrate the comparison concept; there is no affiliation or live inventory. Illustrative images are served locally; see `public/images/CREDITS.md` for sources. System fonts keep the app independent of external font services.
+Homepage offers, policies, review scores, and savings examples are sample data. `/explore` uses Amadeus when configured and labels test/production inventory. Photos are illustrative Unsplash images, not verified photographs of the named hotels. Homepage provider names illustrate the comparison concept; there is no affiliation. Illustrative images are served locally; see `public/images/CREDITS.md` for sources. System fonts keep the app independent of external font services.
 
-No reservation, payment, or cancellation is implemented. Booking tracking requires a user-managed PostgreSQL instance. Price checks are manual; there is no scheduled polling or email notification. The original browser demo watchlist still uses local storage. Non-two-person searches deliberately show no demo offers. Do not use sample policies to make real cancellation decisions.
+No reservation, payment, or cancellation is implemented. Booking tracking requires PostgreSQL. Manual checks work for entered hotel bookings; matching provider-linked bookings can be checked on arrival or by the separate monitoring worker. Candidate alerts appear in the account page; email notifications are not implemented. The original browser demo watchlist still uses local storage. Do not use sample policies to make real cancellation decisions.
 
-The first working slice runs as one Next.js application to avoid unnecessary infrastructure before live provider access is available. The planned production architecture adds a FastAPI integration/worker service, PostgreSQL + pgvector, Redis + Celery, and authenticated accounts.
+The app runs as a Next.js server with PostgreSQL and an optional monitoring worker. A future Python service and vector retrieval can be added when their capabilities are needed; neither is required by the current implementation.
 
 ## Next implementation stages
 
