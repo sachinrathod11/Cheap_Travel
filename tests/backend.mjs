@@ -63,6 +63,44 @@ try {
     a.cookie,
   );
   assert.equal(created.status, 201);
+  const listed = await request(
+    "/api/bookings",
+    "POST",
+    {
+      hotelId: "alila",
+      hotelName: "",
+      checkIn,
+      checkOut,
+      guests: 2,
+      roomDescription: "Double room",
+      mealPlan: "Breakfast included",
+      originalTotal: 2800,
+      cancellationFee: 0,
+      cancellationBefore: null,
+    },
+    a.cookie,
+  );
+  assert.equal(listed.status, 201);
+  assert.equal(listed.data.booking.hotelName, "Alila Diwa Goa");
+  assert.equal(listed.data.booking.originalTotal, 2800);
+  const missingName = await request(
+    "/api/bookings",
+    "POST",
+    {
+      hotelId: "custom",
+      hotelName: "",
+      checkIn,
+      checkOut,
+      guests: 2,
+      roomDescription: "Double room",
+      mealPlan: "Breakfast included",
+      originalTotal: 2800,
+      cancellationFee: 0,
+    },
+    a.cookie,
+  );
+  assert.equal(missingName.status, 400);
+  assert.ok(missingName.data.fields.hotelName);
   const id = created.data.booking.id;
   assert.equal(
     (
@@ -124,7 +162,7 @@ try {
     200,
   );
   console.log(
-    "PASS: registration, sessions, booking persistence, decimal prices, owner-only reads/writes and retrieval, deletion, and explicit missing-provider configuration.",
+    "PASS: registration, sessions, listed/custom booking persistence, field-specific validation, decimal prices, owner-only reads/writes and retrieval, deletion, and explicit missing-provider configuration.",
   );
 } finally {
   for (const id of users)

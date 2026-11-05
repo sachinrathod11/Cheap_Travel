@@ -1,34 +1,8 @@
-import { z } from "zod";
+import { bookingInput, bookingValidationError } from "@/lib/booking-input";
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { store } from "@/lib/db";
 import { hotels } from "@/lib/hotels";
-
-const date = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine(
-    (v) =>
-      !Number.isNaN(Date.parse(v)) &&
-      new Date(v).toISOString().slice(0, 10) === v,
-  );
-const bookingInput = z.object({
-  hotelId: z.string().min(1),
-  hotelName: z.string().trim().min(2).max(200).optional(),
-  providerHotelId: z
-    .string()
-    .regex(/^[A-Z0-9]{8}$/)
-    .optional(),
-  roomKey: z.string().max(1000).optional(),
-  checkIn: date,
-  checkOut: date,
-  guests: z.number().int().min(1).max(12),
-  roomDescription: z.string().trim().min(2).max(120),
-  mealPlan: z.string().trim().min(2).max(80),
-  originalTotal: z.number().positive().max(100000000),
-  cancellationFee: z.number().nonnegative().max(100000000),
-  cancellationBefore: z.string().datetime().nullable().optional(),
-});
 
 export async function GET() {
   const user = await getUser();
@@ -50,10 +24,9 @@ export async function POST(request: Request) {
     );
   const parsed = bookingInput.safeParse(await request.json().catch(() => null));
   if (!parsed.success)
-    return NextResponse.json(
-      { error: "Check the booking details and try again." },
-      { status: 400 },
-    );
+    return NextResponse.json(bookingValidationError(parsed.error), {
+      status: 400,
+    });
   const data = parsed.data;
   const hotel = hotels.find((h) => h.id === data.hotelId);
   if (!hotel && !data.hotelName)

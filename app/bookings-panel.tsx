@@ -117,6 +117,8 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
     try {
       const payload = {
         ...form,
+        hotelName:
+          form.hotelId === "custom" ? form.hotelName.trim() : undefined,
         guests: Number(form.guests),
         originalTotal: Number(form.originalTotal),
         cancellationFee: Number(form.cancellationFee),
