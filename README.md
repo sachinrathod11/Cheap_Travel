@@ -11,6 +11,15 @@ npm ci
 npm run dev
 ```
 
+For accounts and saved booking history, copy `.env.example` to `.env.local`, then start PostgreSQL and initialize the schema:
+
+```sh
+docker compose up -d db
+npm run db:init
+```
+
+Set `DATABASE_URL` to the local PostgreSQL URL shown in `.env.example`. Generate a private `AUTH_SECRET` with `openssl rand -base64 32`; keep both values in `.env.local`, never in source control. Registration requires a password of at least 12 characters. The app stores a seven-day, HTTP-only session cookie.
+
 Run commands in the repository root. `npm run build` produces the production build; `npm start` starts it. `npm test` checks savings calculations, stay duration, and equivalent demo offer conditions.
 
 ## What works
@@ -20,6 +29,8 @@ Run commands in the repository root. `npm run build` produces the production bui
 - Hotel details with room policies and provider offers.
 - Saved hotels and watchlist persistence in browser local storage.
 - A deliberate 15% price-drop simulation with net savings after the user-entered cancellation fee.
+- Account registration and sign-in, with salted password hashes and signed sessions.
+- Private hotel booking records with room, dates, meal plan, cancellation terms, and manually recorded price history.
 - A server-side policy assistant that retrieves relevant policy documents, exposes its sources, and optionally uses an LLM to generate a grounded answer.
 - Responsive layouts for desktop and mobile.
 
@@ -35,7 +46,7 @@ To enable model generation, copy `.env.example` to `.env.local` and set `AI_API_
 
 All offers, policies, review scores, and savings examples are sample data. Photos are illustrative Unsplash images, not verified photographs of the named hotels. Provider names illustrate the comparison concept; there is no affiliation or live inventory. Illustrative images are served locally; see `public/images/CREDITS.md` for sources. System fonts keep the app independent of external font services.
 
-No reservation, payment, cancellation, background price polling, email notification, authentication, or multi-device persistence is implemented. The watchlist starts from a sample quote, not an imported real booking. Non-two-person searches deliberately show no demo offers. Do not use sample policies to make real cancellation decisions.
+No reservation, payment, or cancellation is implemented. Booking tracking requires a user-managed PostgreSQL instance. Price checks are manual; there is no scheduled polling or email notification. The original browser demo watchlist still uses local storage. Non-two-person searches deliberately show no demo offers. Do not use sample policies to make real cancellation decisions.
 
 The first working slice runs as one Next.js application to avoid unnecessary infrastructure before live provider access is available. The planned production architecture adds a FastAPI integration/worker service, PostgreSQL + pgvector, Redis + Celery, and authenticated accounts.
 
