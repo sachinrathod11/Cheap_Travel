@@ -7,9 +7,13 @@
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "db:init": "node scripts/init-db.mjs"
+    "test:backend": "node tests/backend.mjs",
+    "db:init": "node scripts/init-db.mjs",
+    "monitor": "node scripts/monitor.mjs",
+    "monitor:once": "node scripts/monitor.mjs --once"
   },
   "dependencies": {
+    "@next/env": "^15.5.29",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.15",
     "lucide-react": "^0.468.0",

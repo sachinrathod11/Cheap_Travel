@@ -4,7 +4,7 @@ import { getUser } from "@/lib/auth";
 import { store } from "@/lib/db";
 
 const input = z.object({
-  total: z.number().int().positive().max(100000000),
+  total: z.number().positive().max(100000000),
   provider: z.string().trim().min(2).max(80),
 });
 export async function POST(

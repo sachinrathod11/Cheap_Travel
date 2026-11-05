@@ -49,6 +49,22 @@ const initialDate = (offset: number) => {
 };
 export default function Home() {
   const [tab, setTab] = useState("Discover");
+  const [providerAlerts, setProviderAlerts] = useState(0);
+  useEffect(() => {
+    let active = true;
+    async function refresh() {
+      const r = await fetch("/api/auth/session");
+      const session = await r.json();
+      if (!session.user) return;
+      await fetch("/api/monitor", { method: "POST" });
+      const alerts = await fetch("/api/alerts").then((r) => r.json());
+      if (active) setProviderAlerts(alerts.alerts?.length || 0);
+    }
+    refresh().catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
   const [city, setCity] = useState("Goa");
   const [destination, setDestination] = useState("Goa");
   const [checkIn, setCheckIn] = useState(initialDate(14));
@@ -78,7 +94,7 @@ export default function Home() {
   >([
     {
       role: "assistant",
-      text: "Hi, I’m your stay assistant. Ask me about demo hotel policies, cancellation windows, or how price tracking works.",
+      text: "Hi, I’m your travel assistant. Ask about planning a stay, comparing rates, cancellation rules or your signed-in bookings. I show retrieved sources; broader travel answers require the server’s AI connection.",
     },
   ]);
   const [busy, setBusy] = useState(false);
@@ -193,7 +209,11 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error);
       setMessages((m) => [
         ...m,
-        { role: "assistant", text: data.answer, sources: data.sources },
+        {
+          role: "assistant",
+          text: data.notice ? `${data.notice}\n\n${data.answer}` : data.answer,
+          sources: data.sources,
+        },
       ]);
     } catch {
       setMessages((m) => [
@@ -225,6 +245,9 @@ export default function Home() {
           <i />
         </a>
         <nav>
+          <a href="/explore" className="provider-link">
+            Hotel search
+          </a>
           {["Discover", "My watchlist", "Saved stays", "My bookings"].map(
             (t) => (
               <button
@@ -245,10 +268,10 @@ export default function Home() {
           <button
             className="bell icon"
             aria-label="View price alerts"
-            onClick={() => setTab("My watchlist")}
+            onClick={() => window.location.assign("/account")}
           >
             <Bell size={19} />
-            {drops.length > 0 && <i />}
+            {providerAlerts > 0 && <i />}
           </button>
           <button
             className="avatar"
@@ -941,7 +964,7 @@ export default function Home() {
             </span>
             <div>
               <strong>Your stay assistant</strong>
-              <small>Answers grounded in demo hotel policies</small>
+              <small>Travel guidance and your booking information</small>
             </div>
             <button
               className="icon"
@@ -952,7 +975,7 @@ export default function Home() {
             </button>
           </div>
           <div className="chat-mode">
-            DEMO KNOWLEDGE · AI ENABLED WHEN CONFIGURED
+            RETRIEVED SOURCES · AI WHEN CONFIGURED
           </div>
           <div className="chat-messages" aria-live="polite">
             {messages.map((m, i) => (

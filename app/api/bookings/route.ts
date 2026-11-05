@@ -7,16 +7,26 @@ import { hotels } from "@/lib/hotels";
 const date = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine((v) => !Number.isNaN(Date.parse(v)));
+  .refine(
+    (v) =>
+      !Number.isNaN(Date.parse(v)) &&
+      new Date(v).toISOString().slice(0, 10) === v,
+  );
 const bookingInput = z.object({
   hotelId: z.string().min(1),
+  hotelName: z.string().trim().min(2).max(200).optional(),
+  providerHotelId: z
+    .string()
+    .regex(/^[A-Z0-9]{8}$/)
+    .optional(),
+  roomKey: z.string().max(1000).optional(),
   checkIn: date,
   checkOut: date,
   guests: z.number().int().min(1).max(12),
   roomDescription: z.string().trim().min(2).max(120),
   mealPlan: z.string().trim().min(2).max(80),
-  originalTotal: z.number().int().positive().max(100000000),
-  cancellationFee: z.number().int().nonnegative().max(100000000),
+  originalTotal: z.number().positive().max(100000000),
+  cancellationFee: z.number().nonnegative().max(100000000),
   cancellationBefore: z.string().datetime().nullable().optional(),
 });
 
@@ -46,9 +56,9 @@ export async function POST(request: Request) {
     );
   const data = parsed.data;
   const hotel = hotels.find((h) => h.id === data.hotelId);
-  if (!hotel)
+  if (!hotel && !data.hotelName)
     return NextResponse.json(
-      { error: "Choose a supported hotel." },
+      { error: "Enter the hotel name." },
       { status: 400 },
     );
   const checkIn = new Date(`${data.checkIn}T00:00:00.000Z`);
@@ -60,8 +70,10 @@ export async function POST(request: Request) {
     );
   const booking = await store.createBooking({
     userId: user.id,
-    hotelId: hotel.id,
-    hotelName: hotel.name,
+    hotelId: hotel?.id || data.hotelId,
+    hotelName: hotel?.name || data.hotelName,
+    providerHotelId: data.providerHotelId,
+    roomKey: data.roomKey,
     checkIn,
     checkOut,
     guests: data.guests,

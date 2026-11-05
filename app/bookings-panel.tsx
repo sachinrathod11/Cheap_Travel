@@ -15,6 +15,9 @@ type Booking = {
   originalTotal: number;
   cancellationFee: number;
   cancellationBefore: string | null;
+  monitoringEnabled?: boolean;
+  lastCheckedAt?: string | null;
+  checkError?: string | null;
   snapshots: {
     id: string;
     total: number;
@@ -31,8 +34,18 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
     [notice, setNotice] = useState("");
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState("");
+  const [alerts, setAlerts] = useState<
+    {
+      id: string;
+      hotelName: string;
+      total: number;
+      savings: number;
+      createdAt: string;
+    }[]
+  >([]);
   const [form, setForm] = useState({
     hotelId: hotels[0]?.id || "",
+    hotelName: "",
     checkIn: "",
     checkOut: "",
     guests: "2",
@@ -49,6 +62,22 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
       setBookings(
         (await fetch("/api/bookings").then((r) => r.json())).bookings || [],
       );
+    if (session.user)
+      setAlerts(
+        (await fetch("/api/alerts").then((r) => r.json())).alerts || [],
+      );
+    if (session.user) {
+      // Refresh eligible monitored stays on arrival, with server-side throttling.
+      const checked = await fetch("/api/monitor", { method: "POST" });
+      if (checked.ok) {
+        setBookings(
+          (await fetch("/api/bookings").then((r) => r.json())).bookings || [],
+        );
+        setAlerts(
+          (await fetch("/api/alerts").then((r) => r.json())).alerts || [],
+        );
+      }
+    }
   }
   useEffect(() => {
     load().catch(() => setError("Could not connect to the account service."));
@@ -73,6 +102,7 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
       setBookings(
         (await fetch("/api/bookings").then((v) => v.json())).bookings || [],
       );
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in.");
     } finally {
@@ -138,6 +168,37 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
     setBookings([]);
+    setAlerts([]);
+  }
+  async function checkPrices() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const r = await fetch("/api/monitor", { method: "POST" });
+      const data = await r.json();
+      if (!r.ok) throw Error(data.error);
+      await load();
+      setNotice(
+        data.busy
+          ? "A price check is already running."
+          : `${data.checked} bookings checked, ${data.alerts} new candidate alerts, ${data.failed} failed. Checks are limited to once per 30 minutes.`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not check prices.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function removeBooking(id: string) {
+    if (!window.confirm("Remove this tracked booking and its price history?"))
+      return;
+    const r = await fetch(`/api/bookings/${id}`, { method: "DELETE" });
+    if (!r.ok) {
+      setError("Could not remove this booking.");
+      return;
+    }
+    await load();
   }
   if (!user)
     return (
@@ -186,7 +247,7 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
               type="password"
               required
               minLength={mode === "register" ? 12 : 1}
-              maxLength={128}
+              maxLength={72}
               autoComplete={
                 mode === "register" ? "new-password" : "current-password"
               }
@@ -229,6 +290,45 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
           Sign out
         </button>
       </div>
+      <div className="monitor-controls">
+        <a className="primary" href="/explore">
+          Search provider offers
+        </a>
+        <button className="outline" disabled={busy} onClick={checkPrices}>
+          {busy ? "Checking…" : "Check monitored prices now"}
+        </button>
+        <p>
+          Automatic checks apply to matching bookings linked through hotel
+          search. Manually added hotels support manual checks.
+        </p>
+      </div>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="form-notice" role="status">
+          {notice}
+        </p>
+      )}
+      {alerts.length > 0 && (
+        <section className="alert-list">
+          <h3>Candidate price-drop alerts</h3>
+          {alerts.map((a) => (
+            <article key={a.id}>
+              <strong>
+                {a.hotelName}: {money(a.savings)} potential saving
+              </strong>
+              <p>
+                Provider quote {money(a.total)} ·{" "}
+                {new Date(a.createdAt).toLocaleString()}. Check taxes,
+                cancellation terms and availability before rebooking.
+              </p>
+            </article>
+          ))}
+        </section>
+      )}
       <div className="booking-layout">
         <form className="booking-form" onSubmit={createBooking}>
           <h3>Track a hotel booking</h3>
@@ -250,7 +350,34 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
                   {h.name}
                 </option>
               ))}
+              <option value="custom">Another hotel</option>
             </select>
+          </label>
+          {form.hotelId === "custom" && (
+            <label>
+              Hotel name
+              <input
+                required
+                maxLength={200}
+                value={form.hotelName}
+                onChange={(e) =>
+                  setForm((v) => ({ ...v, hotelName: e.target.value }))
+                }
+              />
+            </label>
+          )}
+          <label>
+            Guests
+            <input
+              type="number"
+              required
+              min={1}
+              max={12}
+              value={form.guests}
+              onChange={(e) =>
+                setForm((v) => ({ ...v, guests: e.target.value }))
+              }
+            />
           </label>
           <div className="booking-dates">
             <label>
@@ -304,6 +431,7 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
             <input
               type="number"
               min="1"
+              step="0.01"
               required
               value={form.originalTotal}
               onChange={(e) =>
@@ -316,6 +444,7 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
             <input
               type="number"
               min="0"
+              step="0.01"
               required
               value={form.cancellationFee}
               onChange={(e) =>
@@ -366,9 +495,14 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
                     <div>
                       <h3>{b.hotelName}</h3>
                       <p>
-                        {new Date(b.checkIn).toLocaleDateString()} →{" "}
-                        {new Date(b.checkOut).toLocaleDateString()} · {b.guests}{" "}
-                        guests
+                        {new Date(b.checkIn).toLocaleDateString(undefined, {
+                          timeZone: "UTC",
+                        })}{" "}
+                        →{" "}
+                        {new Date(b.checkOut).toLocaleDateString(undefined, {
+                          timeZone: "UTC",
+                        })}{" "}
+                        · {b.guests} guests
                       </p>
                     </div>
                     <button className="outline" onClick={() => snapshot(b)}>
@@ -402,9 +536,20 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
                     ))}
                   </details>
                   <small className="watch-note">
-                    Manual price checks only. Confirm room, dates, meals and
-                    cancellation terms before rebooking.
+                    {b.monitoringEnabled
+                      ? "Provider monitoring enabled."
+                      : "Manual checks enabled."}{" "}
+                    {b.lastCheckedAt &&
+                      `Last provider check: ${new Date(b.lastCheckedAt).toLocaleString()}.`}{" "}
+                    {b.checkError} Confirm room, dates, meals and cancellation
+                    terms before rebooking.
                   </small>
+                  <button
+                    className="outline"
+                    onClick={() => removeBooking(b.id)}
+                  >
+                    Remove tracked booking
+                  </button>
                 </article>
               );
             })
