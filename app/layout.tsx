@@ -11,7 +11,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    // Browser extensions can add attributes (for example data-qb-installed)
+    // before hydration. Suppress root-only attribute warnings; descendants
+    // retain React's normal hydration checks.
+    <html lang="en" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );
