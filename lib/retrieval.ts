@@ -11,7 +11,7 @@ export async function retrieve(question: string, hotelId?: string) {
   const sources: Source[] = [];
   try {
     const { rows } = await db.query(
-      "SELECT id,title,content AS text,source FROM \"KnowledgeDocument\", plainto_tsquery('english',$1) q WHERE to_tsvector('english',title || ' ' || content) @@ q ORDER BY ts_rank(to_tsvector('english',title || ' ' || content),q) DESC LIMIT 4",
+      "SELECT id,title,content AS text,source FROM \"KnowledgeDocument\", plainto_tsquery('english',$1) q WHERE id IN ('rebooking','cancellation','coverage') AND to_tsvector('english',title || ' ' || content) @@ q ORDER BY ts_rank(to_tsvector('english',title || ' ' || content),q) DESC LIMIT 4",
       [question],
     );
     sources.push(...rows);

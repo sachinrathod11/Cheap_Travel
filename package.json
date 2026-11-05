@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "NODE_USE_ENV_PROXY=1 next dev --hostname 0.0.0.0",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "NODE_USE_ENV_PROXY=1 next start --hostname 0.0.0.0",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:backend": "node tests/backend.mjs",
     "db:init": "node scripts/init-db.mjs",
     "monitor": "node scripts/monitor.mjs",
-    "monitor:once": "node scripts/monitor.mjs --once"
+    "monitor:once": "node scripts/monitor.mjs --once",
+    "ai:models": "NODE_USE_ENV_PROXY=1 node scripts/ai-models.mjs"
   },
   "dependencies": {
     "@next/env": "^15.5.29",

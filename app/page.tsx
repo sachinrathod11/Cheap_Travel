@@ -99,7 +99,7 @@ export default function Home() {
   >([
     {
       role: "assistant",
-      text: "Hi, I’m your travel assistant. Ask about planning a stay, comparing rates, cancellation rules or your signed-in bookings. I show retrieved sources; broader travel answers require the server’s AI connection.",
+      text: "Hi, I’m the Cheap Travel assistant. I can help with this app’s hotel comparison, your tracked bookings, cancellation costs and price-drop alerts. I only answer questions related to Cheap Travel.",
     },
   ]);
   const [busy, setBusy] = useState(false);
@@ -208,7 +208,13 @@ export default function Home() {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, hotelId: selected?.id }),
+        body: JSON.stringify({
+          question: q,
+          hotelId: selected?.id,
+          history: messages
+            .slice(-6)
+            .map((m) => ({ role: m.role, content: m.text.slice(0, 1000) })),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -969,7 +975,7 @@ export default function Home() {
             </span>
             <div>
               <strong>Your stay assistant</strong>
-              <small>Travel guidance and your booking information</small>
+              <small>Cheap Travel help and your booking information</small>
             </div>
             <button
               className="icon"
@@ -979,9 +985,7 @@ export default function Home() {
               <X size={19} />
             </button>
           </div>
-          <div className="chat-mode">
-            RETRIEVED SOURCES · AI WHEN CONFIGURED
-          </div>
+          <div className="chat-mode">CHEAP TRAVEL QUESTIONS ONLY</div>
           <div className="chat-messages" aria-live="polite">
             {messages.map((m, i) => (
               <div key={i} className={"message " + m.role}>
@@ -989,7 +993,7 @@ export default function Home() {
                 {m.sources && m.sources.length > 0 && (
                   <details>
                     <summary>
-                      {m.sources.length} retrieved policy source
+                      {m.sources.length} retrieved source
                       {m.sources.length > 1 ? "s" : ""}
                     </summary>
                     {m.sources.map((s) => (
