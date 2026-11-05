@@ -9,6 +9,9 @@ function secret() {
     throw new Error("AUTH_SECRET must contain at least 32 characters.");
   return new TextEncoder().encode(value);
 }
+export function assertAuthReady() {
+  secret();
+}
 
 export async function createSession(userId: string) {
   const token = await new SignJWT({ sub: userId })
@@ -31,7 +34,7 @@ export async function getUser() {
   try {
     const { payload } = await jwtVerify(token, secret());
     if (typeof payload.sub !== "string") return null;
-    return store.findUserById(payload.sub);
+    return await store.findUserById(payload.sub);
   } catch {
     return null;
   }

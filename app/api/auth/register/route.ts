@@ -1,12 +1,16 @@
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { NextResponse } from "next/server";
-import { createSession } from "@/lib/auth";
+import { createSession, assertAuthReady } from "@/lib/auth";
 import { store } from "@/lib/db";
 
 const input = z.object({
   email: z.string().email().max(254),
-  password: z.string().min(12).max(128),
+  password: z
+    .string()
+    .min(12)
+    .max(72)
+    .refine((v) => Buffer.byteLength(v, "utf8") <= 72),
 });
 export async function POST(request: Request) {
   const parsed = input.safeParse(await request.json().catch(() => null));
@@ -19,6 +23,7 @@ export async function POST(request: Request) {
     );
   const email = parsed.data.email.trim().toLowerCase();
   try {
+    assertAuthReady();
     const user = await store.createUser(
       email,
       await hash(parsed.data.password, 12),

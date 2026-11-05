@@ -1,10 +1,17 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
 import { randomUUID } from "node:crypto";
 
 const globalForPool = globalThis as unknown as { pool?: Pool };
+types.setTypeParser(1700, Number);
+types.setTypeParser(1082, (value) => value);
 export const db =
   globalForPool.pool ??
-  new Pool({ connectionString: process.env.DATABASE_URL });
+  new Pool({
+    connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 5000,
+    query_timeout: 15000,
+    max: 10,
+  });
 if (process.env.NODE_ENV !== "production") globalForPool.pool = db;
 
 const snapshots = {
@@ -76,16 +83,28 @@ export const store = {
         ],
       );
       await client.query(
+        'UPDATE "Booking" SET "providerHotelId"=$2,"roomKey"=$3,"monitoringEnabled"=$4 WHERE id=$1',
+        [
+          id,
+          data.providerHotelId || null,
+          data.roomKey || null,
+          Boolean(data.providerHotelId && data.roomKey),
+        ],
+      );
+      await client.query(
         'INSERT INTO "PriceSnapshot" ("id", "bookingId", "total", "provider") VALUES ($1,$2,$3,$4)',
         [randomUUID(), id, data.originalTotal, "Your booking"],
       );
-      await client.query("COMMIT");
-      return {
+      const booking = {
         ...result.rows[0],
+        providerHotelId: data.providerHotelId || null,
+        monitoringEnabled: Boolean(data.providerHotelId && data.roomKey),
         snapshots: await client
           .query('SELECT * FROM "PriceSnapshot" WHERE "bookingId"=$1', [id])
           .then((v) => v.rows),
       };
+      await client.query("COMMIT");
+      return booking;
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
