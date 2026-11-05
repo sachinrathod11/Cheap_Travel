@@ -1,0 +1,104 @@
+import { Pool } from "pg";
+import { randomUUID } from "node:crypto";
+
+const globalForPool = globalThis as unknown as { pool?: Pool };
+export const db =
+  globalForPool.pool ??
+  new Pool({ connectionString: process.env.DATABASE_URL });
+if (process.env.NODE_ENV !== "production") globalForPool.pool = db;
+
+const snapshots = {
+  async create({
+    data,
+  }: {
+    data: { bookingId: string; total: number; provider: string };
+  }) {
+    const result = await db.query(
+      'INSERT INTO "PriceSnapshot" ("id", "bookingId", "total", "provider") VALUES ($1, $2, $3, $4) RETURNING *',
+      [randomUUID(), data.bookingId, data.total, data.provider],
+    );
+    return result.rows[0];
+  },
+};
+
+export const store = {
+  async createUser(email: string, passwordHash: string) {
+    const result = await db.query(
+      'INSERT INTO "User" ("id", "email", "passwordHash") VALUES ($1, $2, $3) RETURNING "id", "email"',
+      [randomUUID(), email, passwordHash],
+    );
+    return result.rows[0];
+  },
+  async findUserByEmail(email: string) {
+    const result = await db.query(
+      'SELECT "id", "email", "passwordHash" FROM "User" WHERE "email" = $1',
+      [email],
+    );
+    return result.rows[0] ?? null;
+  },
+  async findUserById(id: string) {
+    const result = await db.query(
+      'SELECT "id", "email" FROM "User" WHERE "id" = $1',
+      [id],
+    );
+    return result.rows[0] ?? null;
+  },
+  async listBookings(userId: string) {
+    const result = await db.query(
+      'SELECT b.*, COALESCE(json_agg(s ORDER BY s."capturedAt" DESC) FILTER (WHERE s."id" IS NOT NULL), \'[]\') AS "snapshots" FROM "Booking" b LEFT JOIN "PriceSnapshot" s ON s."bookingId" = b."id" WHERE b."userId" = $1 GROUP BY b."id" ORDER BY b."checkIn" ASC',
+      [userId],
+    );
+    return result.rows.map((row) => ({
+      ...row,
+      snapshots: row.snapshots.slice(0, 10),
+    }));
+  },
+  async createBooking(data: Record<string, unknown>) {
+    const id = randomUUID();
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        'INSERT INTO "Booking" ("id", "userId", "hotelId", "hotelName", "checkIn", "checkOut", "guests", "roomDescription", "mealPlan", "originalTotal", "cancellationFee", "cancellationBefore", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) RETURNING *',
+        [
+          id,
+          data.userId,
+          data.hotelId,
+          data.hotelName,
+          data.checkIn,
+          data.checkOut,
+          data.guests,
+          data.roomDescription,
+          data.mealPlan,
+          data.originalTotal,
+          data.cancellationFee,
+          data.cancellationBefore,
+        ],
+      );
+      await client.query(
+        'INSERT INTO "PriceSnapshot" ("id", "bookingId", "total", "provider") VALUES ($1,$2,$3,$4)',
+        [randomUUID(), id, data.originalTotal, "Your booking"],
+      );
+      await client.query("COMMIT");
+      return {
+        ...result.rows[0],
+        snapshots: await client
+          .query('SELECT * FROM "PriceSnapshot" WHERE "bookingId"=$1', [id])
+          .then((v) => v.rows),
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+  async ownsBooking(id: string, userId: string) {
+    const result = await db.query(
+      'SELECT "id" FROM "Booking" WHERE "id"=$1 AND "userId"=$2',
+      [id, userId],
+    );
+    return Boolean(result.rows[0]);
+  },
+  snapshots,
+};

@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  bookings     Booking[]
+}
+
+model Booking {
+  id                 String          @id @default(cuid())
+  userId             String
+  hotelId            String
+  hotelName          String
+  checkIn            DateTime        @db.Date
+  checkOut           DateTime        @db.Date
+  guests             Int
+  roomDescription    String
+  mealPlan           String
+  originalTotal      Int
+  currency           String          @default("INR")
+  cancellationFee    Int             @default(0)
+  cancellationBefore DateTime?       @db.Timestamptz(3)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots          PriceSnapshot[]
+
+  @@index([userId, checkIn])
+  @@index([hotelId, checkIn, checkOut])
+}
+
+model PriceSnapshot {
+  id         String   @id @default(cuid())
+  bookingId  String
+  total      Int
+  provider   String
+  capturedAt DateTime @default(now())
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, capturedAt])
+}
