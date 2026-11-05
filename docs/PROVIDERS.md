@@ -15,10 +15,11 @@ This integration does not compare Booking.com, Agoda and MakeMyTrip against one 
 ## AI and RAG
 
 1. Create a server API key at https://platform.openai.com/ and enable API billing/access as required by your account. A ChatGPT subscription does not establish API credits.
-2. Set `AI_API_KEY` and optionally `AI_MODEL` in `.env.local`. Restart the app.
-3. Ask the assistant about travel planning for any destination, or sign in and ask about your booking's room, dates and cancellation terms.
+2. Set `AI_API_KEY` privately in `.env.local`. Run `npm run ai:models` to list the exact API model IDs available to that account. A model label in ChatGPT or Codex is not automatically an API ID, and this app cannot use this chat session as its model backend.
+3. Set `AI_MODEL` to an accessible text model that supports Chat Completions, structured JSON output and the selected reasoning effort. Set `AI_REASONING_EFFORT=low` for a reasoning model supporting low effort. Do not assume a model ID from a chat UI label; no model is silently substituted. Leave effort empty only if you deliberately choose a model without reasoning controls. Restart the app.
+4. Ask about Cheap Travel hotel comparison, using the app, signed-in bookings, price checks and cancellation/rebooking costs. The assistant must redirect unrelated requests; general travel itineraries and other general-purpose conversation are outside its scope.
 
-Retrieval uses PostgreSQL full-text search over the seeded planning/cancellation guides and owner-filtered booking records. Selected sample policies are explicitly labelled demo. This is retrieval-augmented generation; it does not use a vector database or embeddings. The model may offer general travel guidance, but current rates come from the pricing provider, not model memory. Booking passages selected for an answer are sent to the configured model provider. Without an AI key, the app shows retrieved passages and an explicit configuration notice.
+Retrieval uses application help, PostgreSQL cancellation/comparison guides and owner-filtered booking records. Selected sample policies are explicitly labelled demo. This is retrieval-augmented generation; it does not use a vector database or embeddings. The system prompt confines the assistant to Cheap Travel, and structured responses let the server replace off-topic responses with a fixed redirect. Citations are filtered to retrieved sources. These controls are tested with mocked model outputs; prompt adherence must also be evaluated against the actual configured model. Current rates come from the pricing provider, not model memory. Booking passages selected for an answer are sent to the configured model provider. Without an API key or explicit model ID, the app shows only product help and retrieved evidence with a configuration notice. GET `/api/assistant` reports configuration status without exposing credentials.
 
 ## Monitoring and alerts
 
