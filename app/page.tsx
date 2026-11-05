@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { hotels, Hotel, money, savings, nightsBetween } from "@/lib/hotels";
 import BookingsPanel from "@/app/bookings-panel";
+import { localDate } from "@/lib/dates";
 type Watch = {
   id: string;
   hotelId: string;
@@ -41,11 +42,6 @@ type Watch = {
   checkOut: string;
   guests: number;
   simulated: boolean;
-};
-const initialDate = (offset: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
 };
 export default function Home() {
   const [tab, setTab] = useState("Discover");
@@ -67,15 +63,24 @@ export default function Home() {
   }, []);
   const [city, setCity] = useState("Goa");
   const [destination, setDestination] = useState("Goa");
-  const [checkIn, setCheckIn] = useState(initialDate(14));
-  const [checkOut, setCheckOut] = useState(initialDate(17));
+  const [today, setToday] = useState("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState(2);
   const [searched, setSearched] = useState({
     city: "Goa",
-    checkIn: initialDate(14),
-    checkOut: initialDate(17),
+    checkIn: "",
+    checkOut: "",
     guests: 2,
   });
+  useEffect(() => {
+    const start = localDate(14),
+      end = localDate(17);
+    setToday(localDate());
+    setCheckIn(start);
+    setCheckOut(end);
+    setSearched((current) => ({ ...current, checkIn: start, checkOut: end }));
+  }, []);
   const [filter, setFilter] = useState("All stays");
   const [sort, setSort] = useState("Recommended");
   const [watches, setWatches] = useState<Watch[]>([]);
@@ -391,7 +396,7 @@ export default function Home() {
                   aria-label="Check-in"
                   type="date"
                   value={checkIn}
-                  min={initialDate(0)}
+                  min={today || undefined}
                   onChange={(e) => setCheckIn(e.target.value)}
                   required
                 />
@@ -708,7 +713,7 @@ export default function Home() {
                           <span>
                             <b>{h.rating}</b> Exceptional{" "}
                             <small>
-                              ({h.reviews.toLocaleString()} reviews)
+                              ({h.reviews.toLocaleString("en-IN")} reviews)
                             </small>
                           </span>
                           <span className="hotel-stars">★★★★★</span>

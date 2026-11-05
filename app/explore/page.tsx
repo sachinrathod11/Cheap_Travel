@@ -1,7 +1,12 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import type { Quote } from "@/lib/provider";
+import { localDate } from "@/lib/dates";
 export default function Explore() {
+  const [today, setToday] = useState("");
+  useEffect(() => {
+    setToday(localDate());
+  }, []);
   const [city, setCity] = useState("GOI"),
     [checkIn, setIn] = useState(""),
     [checkOut, setOut] = useState(""),
@@ -108,7 +113,7 @@ export default function Explore() {
             required
             type="date"
             value={checkIn}
-            min={new Date().toISOString().slice(0, 10)}
+            min={today || undefined}
             onChange={(e) => setIn(e.target.value)}
           />
         </label>
