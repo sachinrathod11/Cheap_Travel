@@ -13,6 +13,21 @@
   font-weight: 700;
   color: var(--green);
 }
+.chat-action {
+  display: block;
+  padding: 9px 11px;
+  margin-top: 10px;
+  background: #fff;
+  border: 1px solid #cddbc1;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--green);
+}
+.chat-diagnostic p {
+  margin-top: 8px;
+  font-size: 10px;
+  line-height: 1.6;
+}
 .live-search {
   padding-top: 35px;
   padding-bottom: 70px;

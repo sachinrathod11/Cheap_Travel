@@ -6,6 +6,8 @@ export default function Explore() {
   const [today, setToday] = useState("");
   useEffect(() => {
     setToday(localDate());
+    const code = new URLSearchParams(window.location.search).get("cityCode");
+    if (code && /^[A-Z]{3}$/.test(code)) setCity(code);
   }, []);
   const [city, setCity] = useState("GOI"),
     [checkIn, setIn] = useState(""),

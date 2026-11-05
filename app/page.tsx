@@ -95,6 +95,9 @@ export default function Home() {
       role: string;
       text: string;
       sources?: { title: string; text: string }[];
+      notice?: string;
+      diagnosticCode?: string;
+      actions?: { label: string; href: string }[];
     }[]
   >([
     {
@@ -103,6 +106,9 @@ export default function Home() {
     },
   ]);
   const [busy, setBusy] = useState(false);
+  const [assistantStatus, setAssistantStatus] = useState(
+    "Cheap Travel questions only",
+  );
   useEffect(() => {
     try {
       const w = JSON.parse(localStorage.getItem("ct-watches") || "[]");
@@ -218,11 +224,21 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      setAssistantStatus(
+        data.mode === "ai-retrieval"
+          ? "AI response"
+          : data.mode === "scope-redirect"
+            ? "AI scope redirect"
+            : "App help · AI unavailable",
+      );
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          text: data.notice ? `${data.notice}\n\n${data.answer}` : data.answer,
+          text: data.answer,
+          notice: data.notice,
+          diagnosticCode: data.diagnosticCode,
+          actions: data.actions,
           sources: data.sources,
         },
       ]);
@@ -985,11 +1001,29 @@ export default function Home() {
               <X size={19} />
             </button>
           </div>
-          <div className="chat-mode">CHEAP TRAVEL QUESTIONS ONLY</div>
+          <div className="chat-mode">{assistantStatus}</div>
           <div className="chat-messages" aria-live="polite">
             {messages.map((m, i) => (
               <div key={i} className={"message " + m.role}>
                 <p>{m.text}</p>
+                {m.actions?.map((action) => (
+                  <a
+                    className="chat-action"
+                    key={action.href}
+                    href={action.href}
+                  >
+                    {action.label} →
+                  </a>
+                ))}
+                {m.notice && (
+                  <details className="chat-diagnostic">
+                    <summary>
+                      AI connection issue
+                      {m.diagnosticCode ? ` [${m.diagnosticCode}]` : ""}
+                    </summary>
+                    <p>{m.notice}</p>
+                  </details>
+                )}
                 {m.sources && m.sources.length > 0 && (
                   <details>
                     <summary>

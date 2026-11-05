@@ -2,9 +2,10 @@ import { z } from "zod";
 import { retrieve } from "@/lib/retrieval";
 import {
   appGuide,
+  appHelpAnswer,
+  AssistantError,
   generateAppAnswer,
-  isAppQuestion,
-  scopeReply,
+  searchActions,
 } from "@/lib/assistant";
 const input = z.object({
   question: z.string().trim().min(1).max(2000),
@@ -22,6 +23,7 @@ const input = z.object({
 export async function GET() {
   return Response.json({
     configured: Boolean(process.env.AI_API_KEY && process.env.AI_MODEL?.trim()),
+    configurationOnly: true,
     reasoningEffort: process.env.AI_REASONING_EFFORT || "provider-default",
     scope: "cheap-travel-only",
   });
@@ -36,29 +38,34 @@ export async function POST(request: Request) {
   const { question, hotelId, history } = parsed.data;
   const retrieved = await retrieve(question, hotelId);
   const sources = [appGuide, ...retrieved];
-  const fallback = isAppQuestion(question)
-    ? {
-        answer: retrieved.length
-          ? retrieved.map((s) => `${s.title}: ${s.text}`).join("\n\n")
-          : appGuide.text,
-        sources,
-      }
-    : { answer: scopeReply, sources: [] };
+  const fallback = appHelpAnswer(question, sources);
   if (!process.env.AI_API_KEY || !process.env.AI_MODEL?.trim())
     return Response.json({
       ...fallback,
       mode: "retrieval-only",
       notice:
-        "AI generation requires a server API key and an accessible AI_MODEL. Showing Cheap Travel help only.",
+        "AI is not connected: set AI_API_KEY and an accessible AI_MODEL on the server. This reply is app help.",
+      diagnosticCode: "configuration_missing",
     });
   try {
-    return Response.json(await generateAppAnswer(question, sources, history));
-  } catch {
+    const result = await generateAppAnswer(question, sources, history);
+    return Response.json({
+      ...result,
+      actions: result.mode === "ai-retrieval" ? searchActions(question) : [],
+    });
+  } catch (error) {
+    const problem =
+      error instanceof AssistantError
+        ? error
+        : new AssistantError(
+            "unexpected_response",
+            "The AI response could not be read. Run npm run ai:check for a connection check.",
+          );
     return Response.json({
       ...fallback,
       mode: "retrieval-only",
-      notice:
-        "AI generation failed. Check the model ID, reasoning support, API access and quota. Showing Cheap Travel help only.",
+      notice: `AI is offline [${problem.code}]: ${problem.message} This reply is app help.`,
+      diagnosticCode: problem.code,
     });
   }
 }
