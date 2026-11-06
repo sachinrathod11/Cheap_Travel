@@ -74,7 +74,8 @@ test("fallback greets naturally and asks for stay details without claiming live 
   const goa = appHelpAnswer("compare for goa", [appGuide]);
   assert.ok(goa.answer.includes("check-in"));
   assert.ok(goa.answer.includes("have not fetched prices"));
-  assert.equal(goa.actions[0].href, "/explore?cityCode=GOI");
+  assert.equal(goa.actions[0].href, "/web-search?destination=Goa");
+  assert.equal(goa.actions[1].href, "/explore?cityCode=GOI");
   assert.notEqual(goa.answer, appGuide.text);
 });
 test("provider failures distinguish configuration, billing and capability problems", () => {
@@ -99,6 +100,67 @@ test("provider failures distinguish configuration, billing and capability proble
     providerFailure(400, "unsupported_parameter", "response_format").code,
     "structured_output_unsupported",
   );
+});
+test("chat plans a complete stay search but cannot execute an out-of-scope plan", async () => {
+  const original = globalThis.fetch;
+  const keys = ["AI_API_KEY", "AI_MODEL", "AI_REASONING_EFFORT"];
+  const old = keys.map((k) => process.env[k]);
+  process.env.AI_API_KEY = "fixture";
+  process.env.AI_MODEL = "fixture";
+  process.env.AI_REASONING_EFFORT = "low";
+  const plan = {
+    destination: "Goa",
+    checkIn: "2027-01-02",
+    checkOut: "2027-01-04",
+    adults: 2,
+    hotelName: "",
+    budget: 0,
+  };
+  let inScope = true;
+  globalThis.fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    assert.ok(
+      body.response_format.json_schema.schema.required.includes(
+        "search_request",
+      ),
+    );
+    return Response.json({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              in_scope: inScope,
+              answer: "Search request prepared.",
+              source_ids: [],
+              search_request: plan,
+            }),
+          },
+        },
+      ],
+    });
+  };
+  try {
+    assert.deepEqual(
+      (
+        await generateAppAnswer(
+          "Search Goa 2027-01-02 to 2027-01-04 for 2 adults",
+          [appGuide],
+        )
+      ).searchRequest,
+      plan,
+    );
+    inScope = false;
+    assert.equal(
+      (await generateAppAnswer("Unrelated question", [appGuide])).searchRequest,
+      null,
+    );
+  } finally {
+    globalThis.fetch = original;
+    keys.forEach((k, i) => {
+      if (old[i] === undefined) delete process.env[k];
+      else process.env[k] = old[i];
+    });
+  }
 });
 test("model errors expose a safe diagnostic without echoing raw provider secrets", async () => {
   const oldFetch = globalThis.fetch;

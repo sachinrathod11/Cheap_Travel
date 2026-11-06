@@ -31,6 +31,8 @@ import {
 import { hotels, Hotel, money, savings, nightsBetween } from "@/lib/hotels";
 import BookingsPanel from "@/app/bookings-panel";
 import { localDate } from "@/lib/dates";
+import CitedWebAnswer from "@/app/cited-web-answer";
+import type { WebResult } from "@/lib/web-search";
 type Watch = {
   id: string;
   hotelId: string;
@@ -61,7 +63,7 @@ export default function Home() {
       active = false;
     };
   }, []);
-  const [city, setCity] = useState("Goa");
+  const [city] = useState("Goa");
   const [destination, setDestination] = useState("Goa");
   const [today, setToday] = useState("");
   const [checkIn, setCheckIn] = useState("");
@@ -98,6 +100,7 @@ export default function Home() {
       notice?: string;
       diagnosticCode?: string;
       actions?: { label: string; href: string }[];
+      webResult?: WebResult;
     }[]
   >([
     {
@@ -164,9 +167,9 @@ export default function Home() {
       setToast("Check-out must be after check-in.");
       return;
     }
-    setSearched({ city: destination, checkIn, checkOut, guests });
-    setCity(destination);
-    setTab("Discover");
+    window.location.assign(
+      `/web-search?${new URLSearchParams({ destination: destination.trim(), checkIn, checkOut, adults: String(guests) })}`,
+    );
   }
   function track(h: Hotel) {
     if (searched.guests !== 2) {
@@ -225,11 +228,17 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setAssistantStatus(
-        data.mode === "ai-retrieval"
-          ? "AI response"
-          : data.mode === "scope-redirect"
-            ? "AI scope redirect"
-            : "App help · AI unavailable",
+        data.mode === "web-search"
+          ? "Public web search · verify final rates"
+          : data.mode === "app-help"
+            ? "Cheap Travel help"
+            : data.mode === "search-unavailable"
+              ? "Web search unavailable"
+              : data.mode === "ai-retrieval"
+                ? "AI response"
+                : data.mode === "scope-redirect"
+                  ? "AI scope redirect"
+                  : "App help · AI unavailable",
       );
       setMessages((m) => [
         ...m,
@@ -240,6 +249,7 @@ export default function Home() {
           diagnosticCode: data.diagnosticCode,
           actions: data.actions,
           sources: data.sources,
+          webResult: data.webResult,
         },
       ]);
     } catch {
@@ -272,7 +282,7 @@ export default function Home() {
           <i />
         </a>
         <nav>
-          <a href="/explore" className="provider-link">
+          <a href="/web-search" className="provider-link">
             Hotel search
           </a>
           {["Discover", "My watchlist", "Saved stays", "My bookings"].map(
@@ -399,15 +409,14 @@ export default function Home() {
               <MapPin size={21} />
               <span>
                 <small>WHERE TO?</small>
-                <select
+                <input
+                  required
+                  minLength={2}
+                  maxLength={200}
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
                   aria-label="Destination"
-                >
-                  <option>Goa</option>
-                  <option>Jaipur</option>
-                  <option>Udaipur</option>
-                </select>
+                />
               </span>
             </label>
             <label>
@@ -458,9 +467,9 @@ export default function Home() {
             </button>
           </form>
           <div className="search-foot">
-            <ShieldCheck size={13} /> One search. Transparent totals. No booking
-            fees from us.
-            <span>Demo rates are for 2 adults · Taxes included</span>
+            <ShieldCheck size={13} /> Search public hotel pages with cited
+            sources.
+            <span>Verify final room totals at the provider</span>
           </div>
         </section>
         <div className="trust-strip">
@@ -621,13 +630,13 @@ export default function Home() {
                 <h2>
                   {tab === "Saved stays"
                     ? "Your saved stays"
-                    : `Good stays in ${city}`}
+                    : `Sample hotel comparisons in ${city}`}
                   <span>.</span>
                 </h2>
                 <p>
                   {tab === "Saved stays"
                     ? "A little collection of places you love."
-                    : `Handpicked vibes. Compared prices. A smarter place to start.`}
+                    : `Illustrative prices below. Use the search above for public hotel pages.`}
                 </p>
               </div>
               <div className="results-meta">
@@ -1005,7 +1014,31 @@ export default function Home() {
           <div className="chat-messages" aria-live="polite">
             {messages.map((m, i) => (
               <div key={i} className={"message " + m.role}>
-                <p>{m.text}</p>
+                {m.webResult ? (
+                  <>
+                    <CitedWebAnswer result={m.webResult} />
+                    <ol className="chat-web-sources">
+                      {m.webResult.sources.map((s) => (
+                        <li key={s.url}>
+                          <a
+                            href={s.url}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                          >
+                            {s.title || s.url}
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                    <small className="watch-note">
+                      Public research leads only. Verify final room charges and
+                      policies at the provider. These results do not trigger
+                      price-drop alerts.
+                    </small>
+                  </>
+                ) : (
+                  <p>{m.text}</p>
+                )}
                 {m.actions?.map((action) => (
                   <a
                     className="chat-action"
@@ -1040,7 +1073,9 @@ export default function Home() {
                 )}
               </div>
             ))}
-            {busy && <p className="thinking">Checking the policy notes…</p>}
+            {busy && (
+              <p className="thinking">Thinking or searching hotel pages…</p>
+            )}
           </div>
           <form onSubmit={ask}>
             <input

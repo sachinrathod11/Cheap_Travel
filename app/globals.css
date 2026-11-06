@@ -13,6 +13,71 @@
   font-weight: 700;
   color: var(--green);
 }
+.public-search-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 28px 0 16px;
+}
+.search-explanation {
+  font-size: 12px;
+  color: #7d8e73;
+  line-height: 1.8;
+  margin-bottom: 25px;
+}
+.search-explanation a {
+  color: var(--green);
+  text-decoration: underline;
+}
+.web-results {
+  background: white;
+  border: 1px solid #dce5d2;
+  border-radius: 12px;
+  padding: 26px;
+  margin: 28px 0;
+}
+.web-results h2 {
+  font-size: 20px;
+  line-height: 1.6;
+}
+.cited-answer {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.9;
+  margin: 24px 0;
+}
+.cited-answer a,
+.web-results li a {
+  color: var(--green);
+  text-decoration: underline;
+}
+.web-results li {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.web-results li small {
+  display: block;
+  color: #89947e;
+  font-size: 10px;
+  margin-top: 5px;
+}
+.web-verification {
+  background: #f1f5e9;
+  border-radius: 7px;
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #748365;
+}
+@media (max-width: 760px) {
+  .public-search-form {
+    grid-template-columns: 1fr;
+  }
+  .web-results {
+    padding: 18px;
+  }
+  .web-results h2 {
+    font-size: 16px;
+  }
+}
 .chat-action {
   display: block;
   padding: 9px 11px;
@@ -22,6 +87,22 @@
   border-radius: 6px;
   font-size: 11px;
   color: var(--green);
+}
+.message .cited-answer {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0;
+}
+.chat-web-sources {
+  font-size: 10px;
+  line-height: 1.7;
+  padding-left: 17px;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.chat-web-sources a {
+  color: var(--green);
+  text-decoration: underline;
 }
 .chat-diagnostic p {
   margin-top: 8px;
