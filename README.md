@@ -2,7 +2,7 @@
 
 A hotel-first travel comparison and price-tracking MVP built with Next.js, React, and TypeScript. Compare sample offers, save hotels, track a stay, simulate a price drop, and ask a retrieval-backed policy assistant.
 
-Provider hotel search, automatic price-check jobs and in-app candidate alerts are available at `/explore` and `/account` when configured. Follow [Provider, AI and monitoring setup](docs/PROVIDERS.md). Hotel and AI credentials are not bundled. The homepage remains an explicitly labelled sample comparison.
+The main search opens public booking-site research at `/web-search`, using AI web-search tools with clickable citations. It requires an AI key and a tool-capable model, not Amadeus credentials. Run `npm run ai:web-check` to verify access. Public results are unverified leads and cannot trigger rebooking alerts. Structured provider search, price-check jobs and in-app candidate alerts remain at `/explore` and `/account`. Follow [Provider, AI and monitoring setup](docs/PROVIDERS.md). Keys are not bundled; homepage price cards remain labelled samples.
 
 ## Run
 
@@ -16,7 +16,7 @@ npm run dev
 For accounts and saved booking history, copy `.env.example` to `.env.local`, then start PostgreSQL and initialize the schema:
 
 ```sh
-docker compose up -d db
+docker compose up -d --wait db
 npm run db:init
 ```
 

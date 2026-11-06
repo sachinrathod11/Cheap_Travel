@@ -1,6 +1,17 @@
 # Connecting real pricing and AI
 
-The app has separate paths for `/` (the original labelled sample comparison), `/explore` (Amadeus hotel offers), and `/account` (your private tracked bookings). A provider quote is not a reservation, and the app does not cancel or purchase rooms.
+The main search at `/` opens `/web-search` for public hotel pages and cited findings. The homepage's comparison cards remain labelled sample data. `/explore` provides structured Amadeus offers and `/account` holds private tracked bookings. A provider quote is not a reservation, and the app does not cancel or purchase rooms.
+
+## Public booking-site search without hotel API credentials
+
+1. Update your checkout, run `npm ci` and `npm run db:init`, then configure `AI_API_KEY` and `AI_MODEL` in `.env.local`. You do not need Amadeus credentials for public-web research.
+2. Run `npm run ai:web-check` to exercise the OpenAI Responses API with the hosted `web_search` tool. A successful `ai:check` text request does not establish tool support. If needed, explicitly set `AI_WEB_SEARCH_MODEL` to an account-accessible model that supports Responses web search; no other model is silently substituted. Web-search reasoning uses `AI_WEB_SEARCH_REASONING_EFFORT` when present, otherwise `AI_REASONING_EFFORT`. Use `low` for a model supporting it; explicitly leave the web-specific setting empty if choosing a model without reasoning controls.
+3. Sign in and use the main hotel search or `/web-search`. Supply destination, exact dates, adults, optional hotel name and per-night INR budget. Public search is limited to six attempts per ten minutes per account to bound API usage.
+4. The result must contain a completed web-search tool call and provider URL citations. Citation links are rendered inline and in the source list. Output without real search/citation evidence is rejected. Search timestamps describe when the search ran, not the freshness of every page.
+
+The chat can also start public research when a signed-in customer explicitly supplies a complete stay, for example: "Search hotels in Goa from 2027-01-02 to 2027-01-04 for 2 adults." Missing dates (including year) or occupancy must be clarified first. The chat model returns a structured search request, the server validates it, and only then calls the web-search tool. Successful web findings appear with clickable citations in the chat. The same quota applies to chat and form searches. A failed tool call produces a search error, not a fabricated comparison.
+
+This uses OpenAI's search tool, not the model's memory. It searches public pages where accessible and does not require a separate scraping-provider key or direct hotel API partnership for this research path. It has model/tool usage charges and cannot guarantee every travel site's coverage. Search engines may return cached/indexed material. Booking engines may hide date-specific rates behind JavaScript, sessions, sign-in or checkout. Snippets and from-prices are research leads, not verified equivalent rooms. Never use this output as the sole basis for cancelling a booking; web results cannot trigger price-drop alerts or enter the monitoring pipeline automatically. Always verify final dates, occupancy, room, meals, taxes and cancellation terms at the provider. The app does not bypass blocks or use rotating proxies.
 
 ## Hotel API access
 
