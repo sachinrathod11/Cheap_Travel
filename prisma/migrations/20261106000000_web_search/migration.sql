@@ -1,0 +1,5 @@
+CREATE TABLE "WebSearchUsage" (
+  "userId" TEXT PRIMARY KEY REFERENCES "User"(id) ON DELETE CASCADE,
+  "windowStarted" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  count INTEGER NOT NULL DEFAULT 1 CHECK(count>0)
+);

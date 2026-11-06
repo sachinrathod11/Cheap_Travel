@@ -40,6 +40,7 @@ try {
   assert.equal(b.status, 201);
   users.push(b.data.user.id);
   assert.equal((await request("/api/bookings")).status, 401);
+  assert.equal((await request("/api/web-search", "POST", {})).status, 401);
   const checkIn = new Date(Date.now() + 30 * 86400000)
       .toISOString()
       .slice(0, 10),
@@ -157,6 +158,15 @@ try {
   );
   assert.equal(noKey.status, 503);
   assert.ok(!noKey.data.quotes);
+  const webNoKey = await request(
+    "/api/web-search",
+    "POST",
+    { destination: "Goa", checkIn, checkOut, adults: 2 },
+    a.cookie,
+  );
+  assert.equal(webNoKey.status, 503);
+  assert.equal(webNoKey.data.code, "search_not_configured");
+  assert.ok(!webNoKey.data.answer);
   assert.equal(
     (await request("/api/auth/logout", "POST", undefined, a.cookie)).status,
     200,

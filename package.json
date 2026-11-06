@@ -8,11 +8,13 @@
     "start": "NODE_USE_ENV_PROXY=1 next start --hostname 0.0.0.0",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:backend": "node tests/backend.mjs",
+    "test:web-backend": "node tests/web-backend.mjs",
     "db:init": "node scripts/init-db.mjs",
     "monitor": "node scripts/monitor.mjs",
     "monitor:once": "node scripts/monitor.mjs --once",
     "ai:models": "NODE_USE_ENV_PROXY=1 node scripts/ai-models.mjs",
-    "ai:check": "NODE_USE_ENV_PROXY=1 node --experimental-strip-types scripts/ai-check.mjs"
+    "ai:check": "NODE_USE_ENV_PROXY=1 node --experimental-strip-types scripts/ai-check.mjs",
+    "ai:web-check": "NODE_USE_ENV_PROXY=1 node --experimental-strip-types scripts/ai-web-check.mjs"
   },
   "dependencies": {
     "@next/env": "^15.5.29",

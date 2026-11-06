@@ -23,7 +23,11 @@ try {
       'INSERT INTO "SchemaMigration" (name) VALUES ($1) ON CONFLICT DO NOTHING',
       ["20261105000000_init"],
     );
-  for (const name of ["20261105000000_init", "20261105000001_monitoring"]) {
+  for (const name of [
+    "20261105000000_init",
+    "20261105000001_monitoring",
+    "20261106000000_web_search",
+  ]) {
     if (
       (
         await client.query('SELECT name FROM "SchemaMigration" WHERE name=$1', [
