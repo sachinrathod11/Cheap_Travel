@@ -1,5 +1,6 @@
 import { nearbyInput } from "@/lib/geography";
 import { nearbyHotels } from "@/lib/geo-catalog";
+import { locationFailure } from "@/lib/location-errors";
 export const maxDuration = 60;
 export async function GET(request: Request) {
   const q = nearbyInput.safeParse(
@@ -15,11 +16,13 @@ export async function GET(request: Request) {
     );
   try {
     return Response.json(await nearbyHotels(q.data));
-  } catch {
+  } catch (error) {
+    const failure = locationFailure(error);
+    // Log codes only: database error messages can contain private connection details.
+    console.error("Nearby hotels failed", failure.code, (error as { code?: string } | null)?.code || "");
     return Response.json(
       {
-        error:
-          "Location discovery is unavailable. Check database migrations, allow overpass-api.de from the server, or retry with a smaller radius. No sample hotels have been substituted.",
+        ...failure,
       },
       { status: 503 },
     );

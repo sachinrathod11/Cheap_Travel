@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
+import { LocationServiceError } from "@/lib/location-errors";
 import { mappedHotels, referenceFor, type NearbyQuery } from "@/lib/geography";
 export async function nearbyHotels(query: NearbyQuery) {
   const origin = referenceFor(query),
@@ -25,7 +26,7 @@ export async function nearbyHotels(query: NearbyQuery) {
       locked = (
         await client.query("SELECT pg_try_advisory_lock(173731) AS locked")
       ).rows[0].locked;
-      if (!locked) throw Error("The location service is busy; retry shortly.");
+      if (!locked) throw new LocationServiceError("map_busy", "The location service is busy. Retry shortly.");
       const q = `[out:json][timeout:25];nwr["tourism"~"^(hotel|motel|guest_house|hostel|apartment)$"](around:${query.radiusKm * 1000},${origin.lat},${origin.lon});out center;`;
       const response = await fetch("https://overpass-api.de/api/interpreter", {
         method: "POST",
@@ -33,14 +34,23 @@ export async function nearbyHotels(query: NearbyQuery) {
         body: new URLSearchParams({ data: q }),
         signal: AbortSignal.timeout(35000),
         cache: "no-store",
+      }).catch((error: unknown) => {
+        const timeout = error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name);
+        throw new LocationServiceError(timeout ? "map_timeout" : "map_connection_failed", timeout
+          ? "The map service timed out. Retry with a smaller radius."
+          : "The server could not connect to overpass-api.de. Check its network or proxy settings, then retry.");
       });
       if (!response.ok)
-        throw Error(
-          "The map-data service could not complete this request. Try a smaller radius later.",
+        throw new LocationServiceError(
+          `map_http_${response.status}`,
+          response.status === 403
+            ? "Access to the map service was refused (HTTP 403). Check whether the server network allows overpass-api.de."
+            : `The map service returned HTTP ${response.status}. Retry later or use a smaller radius.`,
         );
       const result = await response.json();
       if (result.remark)
-        throw Error(
+        throw new LocationServiceError(
+          "map_query_incomplete",
           "The map-data query was incomplete. Reduce the radius and try again.",
         );
       mappedHotels(result, origin, query.radiusKm); // Validate before retaining upstream data.
