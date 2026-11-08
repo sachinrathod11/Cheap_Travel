@@ -3,6 +3,9 @@ import { useEffect, useState, FormEvent } from "react";
 import type { WebResult } from "@/lib/web-search";
 import { localDate } from "@/lib/dates";
 import CitedAnswer from "@/app/cited-web-answer";
+import HandoffButton from "@/app/handoff-button";
+import { publicWebsite } from "@/lib/public-url";
+import PendingVisitsBanner from "@/app/pending-visits-banner";
 export default function WebSearchPage() {
   const [form, setForm] = useState({
     destination: "",
@@ -11,6 +14,8 @@ export default function WebSearchPage() {
     adults: "2",
     hotelName: "",
     budget: "",
+    locationReference: "",
+    radiusKm: "",
   });
   const [today, setToday] = useState(""),
     [busy, setBusy] = useState(false),
@@ -31,6 +36,10 @@ export default function WebSearchPage() {
         ? q.get("checkOut")!
         : "",
       adults: /^[1-8]$/.test(q.get("adults") || "") ? q.get("adults")! : "2",
+      hotelName: q.get("hotelName")?.slice(0, 200) || "",
+      budget: q.get("budget")?.slice(0, 10) || "",
+      locationReference: q.get("locationReference")?.slice(0, 200) || "",
+      radiusKm: q.get("radiusKm") || "",
     }));
   }, []);
   async function submit(e: FormEvent) {
@@ -48,6 +57,8 @@ export default function WebSearchPage() {
           ...form,
           adults: Number(form.adults),
           budget: Number(form.budget) || 0,
+          locationReference: form.locationReference || undefined,
+          radiusKm: form.radiusKm ? Number(form.radiusKm) : undefined,
         }),
       });
       const data = await r.json();
@@ -67,6 +78,7 @@ export default function WebSearchPage() {
   }
   return (
     <main className="live-search">
+      <PendingVisitsBanner />
       <div className="section-heading">
         <div>
           <a href="/">← Cheap Travel</a>
@@ -80,6 +92,14 @@ export default function WebSearchPage() {
           Sign in / My bookings
         </a>
       </div>
+      {form.locationReference && (
+        <p className="search-explanation">
+          Research for the selected hotel near {form.locationReference}, with a{" "}
+          {form.radiusKm} km location preference. The map locator applies the
+          distance boundary; public pages still need identity and rate
+          verification.
+        </p>
+      )}
       <form className="booking-form public-search-form" onSubmit={submit}>
         <label>
           Destination
@@ -199,6 +219,18 @@ export default function WebSearchPage() {
                   {s.title || new URL(s.url).hostname}
                 </a>
                 <small>{new URL(s.url).hostname}</small>
+                {searched?.hotelName && publicWebsite(s.url) && (
+                  <HandoffButton
+                    info={{
+                      hotelName: searched.hotelName,
+                      targetUrl: s.url,
+                      city: searched.destination,
+                      checkIn: searched.checkIn,
+                      checkOut: searched.checkOut,
+                      guests: Number(searched.adults),
+                    }}
+                  />
+                )}
               </li>
             ))}
           </ul>

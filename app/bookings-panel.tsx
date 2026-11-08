@@ -1,6 +1,7 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
 import { Hotel, money } from "@/lib/hotels";
+import HandoffsPanel from "@/app/handoffs-panel";
 
 type User = { id: string; email: string };
 type Booking = {
@@ -18,6 +19,8 @@ type Booking = {
   monitoringEnabled?: boolean;
   lastCheckedAt?: string | null;
   checkError?: string | null;
+  city?: string | null;
+  sourceUrl?: string | null;
   snapshots: {
     id: string;
     total: number;
@@ -331,6 +334,7 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
           ))}
         </section>
       )}
+      <HandoffsPanel onConfirmed={load} />
       <div className="booking-layout">
         <form className="booking-form" onSubmit={createBooking}>
           <h3>Track a hotel booking</h3>
@@ -546,6 +550,18 @@ export default function BookingsPanel({ hotels }: { hotels: Hotel[] }) {
                     {b.checkError} Confirm room, dates, meals and cancellation
                     terms before rebooking.
                   </small>
+                  {b.sourceUrl && (
+                    <p className="watch-note">
+                      Booking details reported by you after an external site
+                      visit; not verified by that provider.
+                    </p>
+                  )}
+                  <a
+                    className="outline"
+                    href={`/web-search?${new URLSearchParams({ destination: b.city || b.hotelName, hotelName: b.hotelName, checkIn: b.checkIn.slice(0, 10), checkOut: b.checkOut.slice(0, 10), adults: String(b.guests) })}`}
+                  >
+                    Research this same stay again
+                  </a>
                   <button
                     className="outline"
                     onClick={() => removeBooking(b.id)}

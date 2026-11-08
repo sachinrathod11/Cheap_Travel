@@ -16,7 +16,7 @@ try {
   );
   // Adopt installations created before migration tracking was introduced.
   const existing = await client.query(
-    `SELECT to_regclass('public."User"') AS existing`,
+    `SELECT to_regclass('"User"') AS existing`,
   );
   if (existing.rows[0].existing)
     await client.query(
@@ -27,6 +27,7 @@ try {
     "20261105000000_init",
     "20261105000001_monitoring",
     "20261106000000_web_search",
+    "20261108000000_locations_handoffs",
   ]) {
     if (
       (

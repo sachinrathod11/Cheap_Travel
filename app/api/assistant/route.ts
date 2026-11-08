@@ -7,10 +7,12 @@ export const maxDuration = 180;
 import {
   appGuide,
   webSearchGuide,
+  locationGuide,
   appHelpAnswer,
   AssistantError,
   generateAppAnswer,
   searchActions,
+  nearbyAction,
 } from "@/lib/assistant";
 const input = z.object({
   question: z.string().trim().min(1).max(2000),
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
     );
   const { question, hotelId, history } = parsed.data;
   const retrieved = await retrieve(question, hotelId);
-  const sources = [appGuide, webSearchGuide, ...retrieved];
+  const sources = [appGuide, webSearchGuide, locationGuide, ...retrieved];
   const fallback = appHelpAnswer(question, sources);
   if (!process.env.AI_API_KEY || !process.env.AI_MODEL?.trim())
     return Response.json({
@@ -62,6 +64,25 @@ export async function POST(request: Request) {
             "Please confirm the destination, future check-in/check-out dates (including the year), and 1–8 adults so I can search accurately.",
           sources: [],
           actions: searchActions(question),
+          mode: "app-help",
+        });
+      const location = nearbyAction(
+        stay.data.destination,
+        [
+          ...history
+            .filter((m) => m.role === "user")
+            .slice(-2)
+            .map((m) => m.content),
+          question,
+        ].join(" "),
+        stay.data,
+      );
+      if (location)
+        return Response.json({
+          answer:
+            "Use the nearby-hotel locator to choose the correct airport, railway station or map point and apply an actual distance boundary. Public web snippets alone do not establish that a hotel is inside your radius.",
+          sources: [],
+          actions: [location],
           mode: "app-help",
         });
       const user = await getUser();

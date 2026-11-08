@@ -33,6 +33,7 @@ import BookingsPanel from "@/app/bookings-panel";
 import { localDate } from "@/lib/dates";
 import CitedWebAnswer from "@/app/cited-web-answer";
 import type { WebResult } from "@/lib/web-search";
+import PendingVisitsBanner from "@/app/pending-visits-banner";
 type Watch = {
   id: string;
   hotelId: string;
@@ -167,6 +168,17 @@ export default function Home() {
       setToast("Check-out must be after check-in.");
       return;
     }
+    const region = /\bgoa\b/i.test(destination)
+      ? "goa"
+      : /\bjaipur\b/i.test(destination)
+        ? "jaipur"
+        : null;
+    if (region) {
+      window.location.assign(
+        `/nearby?${new URLSearchParams({ region, checkIn, checkOut, adults: String(guests) })}`,
+      );
+      return;
+    }
     window.location.assign(
       `/web-search?${new URLSearchParams({ destination: destination.trim(), checkIn, checkOut, adults: String(guests) })}`,
     );
@@ -282,6 +294,9 @@ export default function Home() {
           <i />
         </a>
         <nav>
+          <a href="/nearby" className="provider-link">
+            Nearby hotels
+          </a>
           <a href="/web-search" className="provider-link">
             Hotel search
           </a>
@@ -322,6 +337,7 @@ export default function Home() {
         </div>
       </header>
       <main>
+        <PendingVisitsBanner />
         <div className="intro">
           <span className="eyebrow">
             <span /> LESS SPENDING. MORE GOING.

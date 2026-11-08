@@ -1,4 +1,4 @@
-import { Pool, types } from "pg";
+import { Pool, types, type PoolClient } from "pg";
 import { randomUUID } from "node:crypto";
 
 const globalForPool = globalThis as unknown as { pool?: Pool };
@@ -60,11 +60,14 @@ export const store = {
       snapshots: row.snapshots.slice(0, 10),
     }));
   },
-  async createBooking(data: Record<string, unknown>) {
+  async createBooking(
+    data: Record<string, unknown>,
+    transactionClient?: PoolClient,
+  ) {
     const id = randomUUID();
-    const client = await db.connect();
+    const client = transactionClient ?? (await db.connect());
     try {
-      await client.query("BEGIN");
+      if (!transactionClient) await client.query("BEGIN");
       const result = await client.query(
         'INSERT INTO "Booking" ("id", "userId", "hotelId", "hotelName", "checkIn", "checkOut", "guests", "roomDescription", "mealPlan", "originalTotal", "cancellationFee", "cancellationBefore", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) RETURNING *',
         [
@@ -83,12 +86,14 @@ export const store = {
         ],
       );
       await client.query(
-        'UPDATE "Booking" SET "providerHotelId"=$2,"roomKey"=$3,"monitoringEnabled"=$4 WHERE id=$1',
+        'UPDATE "Booking" SET "providerHotelId"=$2,"roomKey"=$3,"monitoringEnabled"=$4,city=$5,"sourceUrl"=$6 WHERE id=$1',
         [
           id,
           data.providerHotelId || null,
           data.roomKey || null,
           Boolean(data.providerHotelId && data.roomKey),
+          data.city || null,
+          data.sourceUrl || null,
         ],
       );
       await client.query(
@@ -99,17 +104,19 @@ export const store = {
         ...result.rows[0],
         providerHotelId: data.providerHotelId || null,
         monitoringEnabled: Boolean(data.providerHotelId && data.roomKey),
+        city: data.city || null,
+        sourceUrl: data.sourceUrl || null,
         snapshots: await client
           .query('SELECT * FROM "PriceSnapshot" WHERE "bookingId"=$1', [id])
           .then((v) => v.rows),
       };
-      await client.query("COMMIT");
+      if (!transactionClient) await client.query("COMMIT");
       return booking;
     } catch (error) {
-      await client.query("ROLLBACK");
+      if (!transactionClient) await client.query("ROLLBACK");
       throw error;
     } finally {
-      client.release();
+      if (!transactionClient) client.release();
     }
   },
   async ownsBooking(id: string, userId: string) {

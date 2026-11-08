@@ -62,6 +62,46 @@ export function providerFailure(status: number, code?: string, param?: string) {
   );
 }
 export type AssistantAction = { label: string; href: string };
+export function nearbyAction(
+  destination: string,
+  context: string,
+  stay?: { checkIn: string; checkOut: string; adults: number },
+): AssistantAction | null {
+  if (
+    !/airport|railway|station|radius|\b\d+(?:\.\d+)?\s*km\b/i.test(context) ||
+    /ignore.*(?:radius|distance)|no (?:radius|distance) limit/i.test(context)
+  )
+    return null;
+  const region = /jaipur/i.test(destination)
+    ? "jaipur"
+    : /goa/i.test(destination)
+      ? "goa"
+      : null;
+  if (!region) return null;
+  const q = new URLSearchParams({
+    region,
+    ...(stay
+      ? {
+          checkIn: stay.checkIn,
+          checkOut: stay.checkOut,
+          adults: String(stay.adults),
+        }
+      : {}),
+  });
+  if (region === "goa") {
+    if (/mopa|\bgox\b/i.test(context)) q.set("referenceId", "gox");
+    else if (/dabolim|\bgoi\b/i.test(context)) q.set("referenceId", "goi");
+    else if (/thivim/i.test(context)) q.set("referenceId", "thivim");
+    else if (/madgaon|margao/i.test(context)) q.set("referenceId", "madgaon");
+  } else if (/junction|railway|station/i.test(context))
+    q.set("referenceId", "jaipur-junction");
+  const km = context.match(/\b(\d{1,2}(?:\.\d+)?)\s*km\b/i);
+  if (km && Number(km[1]) >= 1 && Number(km[1]) <= 50) q.set("radiusKm", km[1]);
+  return {
+    label: `Set a location boundary in ${region === "goa" ? "Goa" : "Jaipur"}`,
+    href: `/nearby?${q}`,
+  };
+}
 export function searchActions(question: string): AssistantAction[] {
   if (!/compar|search|find|hotel|room|stay|offer/i.test(question)) return [];
   const cities: [RegExp, string, string][] = [
@@ -74,7 +114,9 @@ export function searchActions(question: string): AssistantAction[] {
     [/\blondon\b/i, "LON", "London"],
   ];
   const city = cities.find(([pattern]) => pattern.test(question));
+  const location = city ? nearbyAction(city[2], question) : null;
   return [
+    ...(location ? [location] : []),
     {
       label: city
         ? `Search public sites for ${city[2]}`
@@ -163,7 +205,7 @@ export const appGuide: Source = {
 export const answerSchema = z.object({
   in_scope: z.boolean(),
   answer: z.string().min(1).max(6000),
-  source_ids: z.array(z.string()).max(12),
+  source_ids: z.array(z.string()).max(20),
   search_request: z
     .object({
       destination: z.string(),
@@ -181,6 +223,12 @@ export const webSearchGuide: Source = {
   title: "Public hotel page search",
   source: "Application documentation",
   text: "The main homepage search and /web-search let signed-in customers research public booking/metasearch/direct-hotel pages for a destination, exact dates and adult count. This path uses the configured AI model with an explicit web-search tool and does not require Amadeus credentials. It has API/tool usage costs and may use indexed pages. Results show real source citations; amounts remain unverified unless checkout confirms all booking conditions. They cannot automatically trigger price alerts. /explore separately provides structured Amadeus quotes when configured. This chat can link to the dated search form; it has not itself performed a search merely because someone names a hotel or destination.",
+};
+export const locationGuide: Source = {
+  id: "location-and-booking-handoff",
+  title: "Nearby hotels and external booking visits",
+  source: "Application documentation",
+  text: "Goa and Jaipur have /nearby hotel discovery using mapped OpenStreetMap accommodations, approximate airport/railway/area references or custom coordinates, and a hard 1–50 km straight-line radius. This is not road distance or a complete hotel inventory. Map records have no current room rates; budget is a preference for linked research, not proof that listed hotels fit the price. Save visit & open site records the intended hotel, dates and public HTTPS destination in the signed-in account. Clicking does not confirm a purchase, capture the third-party checkout or verify an official hotel affiliation. On return, the customer can report the room, actual full-stay amount and cancellation terms or dismiss the visit. Confirming twice cannot create a duplicate booking. These customer-reported bookings support manual price checks and repeat public research; automatic alerts still require a comparable structured provider link.",
 };
 
 export async function generateAppAnswer(

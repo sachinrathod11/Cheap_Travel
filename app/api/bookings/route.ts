@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     userId: user.id,
     hotelId: hotel?.id || data.hotelId,
     hotelName: hotel?.name || data.hotelName,
+    city: hotel?.city,
     providerHotelId: data.providerHotelId,
     roomKey: data.roomKey,
     checkIn,

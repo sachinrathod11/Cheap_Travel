@@ -8,6 +8,8 @@ export const webSearchInput = z
     adults: z.coerce.number().int().min(1).max(8),
     hotelName: z.string().trim().max(200).default(""),
     budget: z.coerce.number().nonnegative().max(10000000).default(0),
+    locationReference: z.string().trim().max(200).optional(),
+    radiusKm: z.coerce.number().min(1).max(50).optional(),
   })
   .refine(
     (v) =>
