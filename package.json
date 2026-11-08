@@ -9,6 +9,7 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:backend": "node tests/backend.mjs",
     "test:web-backend": "node tests/web-backend.mjs",
+    "test:locations": "node tests/locations-backend.mjs",
     "db:init": "node scripts/init-db.mjs",
     "monitor": "node scripts/monitor.mjs",
     "monitor:once": "node scripts/monitor.mjs --once",

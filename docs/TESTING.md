@@ -23,4 +23,6 @@ This tests real signup/session routing, chat clarification, validated chat-to-to
 
 ## Real provider capability
 
+For the location/handoff milestone, run `npm run test:locations` after building. It uses a generated local PostgreSQL schema and automatic test-only map/provider fixtures, verifies ownership and idempotent booking confirmation, then removes the schema and server. It refuses a remote database host. See [location and handoff setup](LOCATIONS_AND_BOOKINGS.md).
+
 With real credentials configured privately, `npm run ai:check` tests text conversation and `npm run ai:web-check` separately tests a real cited web search. These can incur API usage charges. Neither a model listing nor the mocked tests establish support for web search. Follow [provider setup](PROVIDERS.md) for model settings and interpretation of results.
